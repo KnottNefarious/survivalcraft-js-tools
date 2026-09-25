@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SC Tools</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #1e1e1e; color: #eee; margin: 0; }
+  h2 { margin: 0 0 12px 0; font-size: 16px; }
+  .row { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  input[type=number], input[type=text] {
+    background: #2b2b2b; color: #eee; border: 1px solid #555;
+    padding: 8px; border-radius: 4px; font-family: monospace; font-size: 15px;
+  }
+  input[type=number] { width: 90px; }
+  select {
+    width: 100%; box-sizing: border-box;
+    background: #2b2b2b; color: #eee; border: 1px solid #555;
+    padding: 10px; border-radius: 4px; font-family: monospace;
+    font-size: 15px; margin-bottom: 6px;
+  }
+  textarea {
+    width: 100%; box-sizing: border-box;
+    background: #2b2b2b; color: #eee;
+    border: 1px solid #555; border-radius: 4px;
+    padding: 8px; font-family: monospace; font-size: 14px;
+  }
+  button {
+    background: #3a7; color: white; border: 0;
+    padding: 10px 16px; border-radius: 4px;
+    font-size: 14px; margin: 2px 4px 2px 0;
+  }
+  button:active { background: #285; }
+  button.alt { background: #456; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+  .tab {
+    padding: 8px 16px; background: #333; color: #aaa;
+    border-radius: 4px 4px 0 0; cursor: pointer; font-size: 14px;
+  }
+  .tab.active { background: #3a7; color: #fff; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .desc {
+    background: #262626; border-left: 3px solid #3a7;
+    padding: 8px 10px; margin: 0 0 8px 0;
+    font-size: 13px; color: #bbb; border-radius: 0 4px 4px 0;
+    min-height: 18px;
+  }
+  pre {
+    background: #111; padding: 10px; border-radius: 4px;
+    white-space: pre-wrap; word-break: break-all;
+    min-height: 60px; font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<h2>Survivalcraft Tools</h2>
+
+<div class="row">
+  <label>Password:</label>
+  <input type="text" id="pw" value="6035" size="6">
+  <label>Port:</label>
+  <input type="text" id="port" value="7765" size="6">
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('runner', this)">JS Runner</div>
+  <div class="tab" onclick="showTab('tp', this)">Teleporter</div>
+</div>
+
+<!-- JS RUNNER PANEL -->
+<div id="runner" class="panel active">
+  <select id="preset" onchange="loadPreset()">
+    <option value="">— Pick a command —</option>
+  </select>
+  <div class="desc" id="desc">Choose a command from the dropdown to load it here.</div>
+  <textarea id="code" rows="10">findSubsystem("Players").PlayersData.Count</textarea>
+  <br>
+  <button onclick="runRaw()">Run</button>
+  <button class="alt" onclick="clearCode()">Clear</button>
+</div>
+
+<!-- TELEPORTER PANEL -->
+<div id="tp" class="panel">
+  <div class="row">
+    <label>X:</label><input type="number" id="x" value="0" step="1">
+    <label>Y:</label><input type="number" id="y" value="100" step="1">
+    <label>Z:</label><input type="number" id="z" value="0" step="1">
+  </div>
+  <button onclick="teleport()">Teleport</button>
+  <button class="alt" onclick="whereAmI()">Where am I?</button>
+  <div class="row">
+    <button class="alt" onclick="nudge(0,10,0)">+10 Y</button>
+    <button class="alt" onclick="nudge(0,-10,0)">-10 Y</button>
+    <button class="alt" onclick="nudge(10,0,0)">+10 X</button>
+    <button class="alt" onclick="nudge(-10,0,0)">-10 X</button>
+  </div>
+  <div class="row">
+    <button class="alt" onclick="saveSpawn()">Set spawn here</button>
+    <button class="alt" onclick="gotoSpawn()">Go to spawn</button>
+  </div>
+</div>
+
+<pre id="out">Ready.</pre>
+
+<script>
+// ----------------------------------------------------------------
+// PRESETS — add your own here. Each entry has:
+//   label: what shows in the dropdown
+//   desc:  plain-English explanation shown below the dropdown
+//   code:  the JavaScript that gets loaded into the textarea
+// ----------------------------------------------------------------
+const PRESETS = [
+  {
+    label: "Count players",
+    desc: "Returns how many player entities exist in the world.",
+    code: 'findSubsystem("Players").PlayersData.Count'
+  },
+  {
+    label: "Where am I? (position)",
+    desc: "Returns your X, Y, Z coordinates as a string.",
+    code:
+      'var b=findSubsystem("Players").PlayersData[0].ComponentPlayer.ComponentBody;' +
+      'b.Position.X.toFixed(1)+", "+b.Position.Y.toFixed(1)+", "+b.Position.Z.toFixed(1)'
+  },
+  {
+    label: "Full player info",
+    desc: "Position, health, name, level, and saved spawn point in one line.",
+    code:
+      'var p=findSubsystem("Players").PlayersData[0];' +
+      'var cp=p.ComponentPlayer;' +
+      'var b=cp.ComponentBody;' +
+      'var lines=[];' +
+      'lines.push("Pos: "+b.Position.X.toFixed(1)+", "+b.Position.Y.toFixed(1)+", "+b.Position.Z.toFixed(1));' +
+      'lines.push("Health: "+cp.ComponentHealth.Health);' +
+      'lines.push("Name: "+p.Name);' +
+      'lines.push("Level: "+p.Level);' +
+      'lines.push("Spawn: "+p.SpawnPosition.X.toFixed(1)+", "+p.SpawnPosition.Y.toFixed(1)+", "+p.SpawnPosition.Z.toFixed(1));' +
+      'lines.join(" | ")'
+  },
+  {
+    label: "Read my velocity",
+    desc: "Shows your current movement velocity. Useful for checking if you're falling or flying.",
+    code:
+      'var v=findSubsystem("Players").PlayersData[0].ComponentPlayer.ComponentBody.Velocity;' +
+      'v.X.toFixed(2)+", "+v.Y.toFixed(2)+", "+v.Z.toFixed(2)'
+  },
+  {
+    label: "Stop moving (zero velocity)",
+    desc: "Sets velocity to zero. Cancels falling, launching, and momentum.",
+    code:
+      'var b=findSubsystem("Players").PlayersData[0].ComponentPlayer.ComponentBody;' +
+      'b.Velocity=new Engine.Vector3(0,0,0);' +
+      '"Velocity zeroed"'
+  },
+  {
+    label: "Launch straight up",
+    desc: "Sets upward velocity to 30. You'll fly upward; gravity brings you back down.",
+    code:
+      'var b=findSubsystem("Players").PlayersData[0].ComponentPlayer.ComponentBody;' +
+      'b.Velocity=new Engine.Vector3(0,30,0);' +
+      '"Launched"'
+  },
+  {
+    label: "Teleport 100 blocks up",
+    desc: "Moves you straight up 100 blocks from your current position.",
+    code:
+      'var b=findSubsystem("Players").PlayersData[0].ComponentPlayer.ComponentBody;' +
+      'b.Position=new Engine.Vector3(b.Position.X,b.Position.Y+100,b.Position.Z);' +
+      '"Went up 100"'
+  },
+  {
+    label: "Save spawn here",
+    desc: "Records your current position as your spawn point.",
+    code:
+      'var p=findSubsystem("Players").PlayersData[0];' +
+      'var b=p.ComponentPlayer.ComponentBody;' +
+      'p.SpawnPosition=new Engine.Vector3(b.Position.X,b.Position.Y,b.Position.Z);' +
+      '"Spawn saved at "+b.Position.X.toFixed(1)+", "+b.Position.Y.toFixed(1)+", "+b.Position.Z.toFixed(1)'
+  },
+  {
+    label: "Go to saved spawn",
+    desc: "Teleports you to your saved spawn point, one block above it.",
+    code:
+      'var p=findSubsystem("Players").PlayersData[0];' +
+      'var s=p.SpawnPosition;' +
+      'p.ComponentPlayer.ComponentBody.Position=new Engine.Vector3(s.X,s.Y+1,s.Z);' +
+      '"Went to spawn"'
+  },
+  {
+    label: "List global API objects",
+    desc: "Prints all 90 top-level names available in JavaScript. Slow to return, but safe.",
+    code: 'Object.getOwnPropertyNames(globalThis).join(",")'
+  },
+  {
+    label: "Inspect player object",
+    desc: "Lists all properties on the PlayerData object. Good starting point for exploring.",
+    code: 'Object.getOwnPropertyNames(findSubsystem("Players").PlayersData[0]).join(",")'
+  },
+  {
+    label: "List game subsystems",
+    desc: "Prints the names of every subsystem registered in the world (Players, Time, Sky, etc.).",
+    code: 'Object.getOwnPropertyNames(findSubsystem("Players").Project.Subsystems).join(",")'
+  }
+];
+
+// Build the dropdown
+(function buildPresets() {
+  const sel = document.getElementById("preset");
+  PRESETS.forEach((p, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = p.label;
+    sel.appendChild(opt);
+  });
+})();
+
+function loadPreset() {
+  const sel = document.getElementById("preset");
+  const idx = sel.value;
+  if (idx === "") {
+    document.getElementById("desc").textContent = "Choose a command from the dropdown to load it here.";
+    return;
+  }
+  const p = PRESETS[parseInt(idx, 10)];
+  document.getElementById("desc").textContent = p.desc;
+  document.getElementById("code").value = p.code;
+}
+
+function clearCode() {
+  document.getElementById("code").value = "";
+  document.getElementById("preset").value = "";
+  document.getElementById("desc").textContent = "Choose a command from the dropdown to load it here.";
+}
+
+function showTab(name, el) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById(name).classList.add("active");
+  el.classList.add("active");
+}
+
+async function send(code) {
+  const out = document.getElementById("out");
+  const pw = document.getElementById("pw").value.trim();
+  const port = document.getElementById("port").value.trim();
+  out.textContent = "Sending...";
+  try {
+    const r = await fetch("http://127.0.0.1:" + port + "/", {
+      method: "POST",
+      headers: { "password": pw },
+      body: code
+    });
+    out.textContent = await r.text();
+  } catch (e) {
+    out.textContent = "FETCH FAILED: " + e.message +
+      "\n\nIs the game in split-screen with Remote Control ON?";
+  }
+}
+
+function runRaw() {
+  send(document.getElementById("code").value);
+}
+
+function teleport() {
+  const x = document.getElementById("x").value;
+  const y = document.getElementById("y").value;
+  const z = document.getElementById("z").value;
+  send(
+    'var b=findSubsystem("Players").PlayersData[0].ComponentPlayer.ComponentBody;' +
+    'b.Position=new Engine.Vector3(' + x + ',' + y + ',' + z + ');' +
+    '"Teleported to ' + x + ',' + y + ',' + z + '"'
+  );
+}
+
+function whereAmI() {
+  send(
+    'var b=findSubsystem("Players").PlayersData[0].ComponentPlayer.ComponentBody;' +
+    'b.Position.X.toFixed(1)+","+b.Position.Y.toFixed(1)+","+b.Position.Z.toFixed(1)'
+  );
+}
+
+function nudge(dx, dy, dz) {
+  send(
+    'var b=findSubsystem("Players").PlayersData[0].ComponentPlayer.ComponentBody;' +
+    'b.Position=new Engine.Vector3(b.Position.X+' + dx + ',b.Position.Y+' + dy + ',b.Position.Z+' + dz + ');' +
+    '"Nudged ' + dx + ',' + dy + ',' + dz + '"'
+  );
+}
+
+function saveSpawn() {
+  send(
+    'var p=findSubsystem("Players").PlayersData[0];' +
+    'var b=p.ComponentPlayer.ComponentBody;' +
+    'p.SpawnPosition=new Engine.Vector3(b.Position.X,b.Position.Y,b.Position.Z);' +
+    '"Spawn set to " + b.Position.X.toFixed(1)+","+b.Position.Y.toFixed(1)+","+b.Position.Z.toFixed(1)'
+  );
+}
+
+function gotoSpawn() {
+  send(
+    'var p=findSubsystem("Players").PlayersData[0];' +
+    'var s=p.SpawnPosition;' +
+    'p.ComponentPlayer.ComponentBody.Position=new Engine.Vector3(s.X,s.Y+1,s.Z);' +
+    '"Went to spawn"'
+  );
+}
+</script>
+
+</body>
+</html>
