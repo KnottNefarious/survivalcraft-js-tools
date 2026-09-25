@@ -26,6 +26,28 @@ It gives you a real text editor (no character limit), a preset dropdown of usefu
 
 ---
 
+## Platform support
+
+This tool was built and tested on **Android**. The underlying protocol (HTTP POST to `127.0.0.1:7765`) is not Android-specific, but the game and the browser must run on the **same device**, because `127.0.0.1` points to the loopback address of whatever device the browser is on.
+
+| Platform | Status | Notes |
+|---|---|---|
+| Android | ✅ Tested | Split-screen required so the game stays in the foreground |
+| Windows / Linux | ✅ Should work | Run the game and Chrome on the same PC; no split-screen needed |
+| macOS | ⚠️ Untested | Only if the API build and JS Remote Control are available |
+| iOS | ⚠️ Untested | The JS remote was originally added as an iOS workaround, so it may work |
+| Phone browser → PC game | ❌ Won't work | `127.0.0.1` cannot cross devices |
+
+### If you're on a PC
+
+You don't need this HTML file. Use `curl`, Python's `requests`, or any HTTP client to POST to the game's server directly:
+
+```
+curl -X POST http://127.0.0.1:7765/ -H "password: YOUR_PASSWORD" -d 'findSubsystem("Players").PlayersData.Count'
+```
+
+The HTML tool exists mainly because phones rarely have a usable HTTP client installed, and typing long JavaScript into a mobile terminal is painful.
+
 ## Setup
 
 ### 1. Turn on Remote Control in the game
