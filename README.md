@@ -85,6 +85,33 @@ The output box shows the raw JSON returned by the game.
 
 ---
 
+## How it works
+
+The whole setup runs locally on your phone. Nothing goes over the internet.
+
+```
+[Your phone]
+     │
+     ├── Survivalcraft API (running in one half of split-screen)
+     │        └── Built-in HTTP server on 127.0.0.1:7765
+     │             (accepts POST with "password" header + JS body)
+     │
+     └── Chrome (running in the other half of split-screen)
+              └── teleport.html (loaded from your Downloads folder)
+                   └── fetch() sends HTTP POST to 127.0.0.1:7765
+                        └── Server runs the JS, returns JSON result
+```
+
+Each time you tap **Run** or **Teleport** in the HTML page:
+
+1. Chrome builds an HTTP POST with your password as a header and your JavaScript as the body.
+2. The request goes to `127.0.0.1:7765` — the loopback address of your own phone. It never leaves the device.
+3. Survivalcraft's built-in server receives it, verifies the password, and hands the JS to the Jint engine.
+4. Jint runs the code inside the game's process with access to the C# objects (`findSubsystem`, `ComponentBody`, etc.).
+5. The server sends back a JSON response, which Chrome displays in the output box.
+
+The `--disable-web-security` flag exists only because Chrome normally refuses to let a `file://` or `content://` page call `http://127.0.0.1`. Removing the flag re-enables that block, and the tool stops working until you re-apply it.
+
 Known limitations
 
 These are limits of the game's API, not the tool:
