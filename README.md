@@ -1,3 +1,5 @@
+**English** | [简体中文](README.zh.md) | [한국어](README.ko.md) | [Español](README.es.md)
+
 # survivalcraft-js-tools
 Single-file HTML tool for running JavaScript and teleporting in Survivalcraft API 1.9.3.1 via the in-game JavaScript Remote Control.
 
