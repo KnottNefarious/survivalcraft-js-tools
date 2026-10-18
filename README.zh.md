@@ -1,4 +1,3 @@
-[English](README.md) | **简体中文** | [한국어](README.ko.md) | [Español](README.es.md)# 你的中文 README 内容...
 
 [English](README.md) | **简体中文** | [한국어](README.ko.md) | [Español](README.es.md)
 
